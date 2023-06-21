@@ -1,6 +1,6 @@
 type RootStackParamList = {
     Home: undefined;
     Details: {
-        name: string;
+        item: any;
     };
 };
