@@ -9,30 +9,25 @@ interface ProgressiveImageProps {
 };
 
 export const ProgressiveImage = (props: ProgressiveImageProps) => {
-    const { smallSource, fullSource, style, ...rest } = props;
+    const { smallSource, fullSource, style, ...restProps } = props;
 
     const [thumbnailAnimated] = useState(new Animated.Value(0));
     const [imageAnimated] = useState(new Animated.Value(0));
 
-    const handleSmallLoad = () => {
-        Animated.timing(thumbnailAnimated, { toValue: 1, useNativeDriver: true }).start();
-    }
-
-    const handleFullLoad = () => {
-        Animated.timing(imageAnimated, { toValue: 1, useNativeDriver: true }).start();
-    }
+    const handleSmallLoad = () => Animated.timing(thumbnailAnimated, { toValue: 1, useNativeDriver: true }).start();
+    const handleFullLoad = () => Animated.timing(imageAnimated, { toValue: 1, useNativeDriver: true }).start();
 
     return (
         <View style={styles.container}>
             <Animated.Image
-                {...rest}
+                {...restProps}
                 source={smallSource}
                 style={[style, { opacity: thumbnailAnimated }]}
                 onLoad={handleSmallLoad}
                 blurRadius={1}
             />
             <Animated.Image
-                {...rest}
+                {...restProps}
                 source={fullSource}
                 style={[styles.imageOverlay, { opacity: imageAnimated }, style]}
                 onLoad={handleFullLoad}

@@ -2,8 +2,6 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { ProgressiveImage } from "../../shared/ProgressiveImage";
 
-type GalleryDetailsProps = NativeStackScreenProps<RootStackParamList, "Details">;
-
 export const GalleryDetailsScreen = ({ route }: GalleryDetailsProps) => {
     const { urls: { full, small } } = route.params.item;
     const { width } = Dimensions.get('window');

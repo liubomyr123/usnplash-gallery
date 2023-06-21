@@ -1,16 +1,4 @@
-import React from 'react';
-
-import { NavigationContainer } from '@react-navigation/native';
 import { RootNavigator } from './navigation';
-import { Provider } from 'react-redux';
-import { store } from './store';
+import { withProviders } from './providers';
 
-export default function () {
-  return (
-    <NavigationContainer>
-      <Provider store={store}>
-        <RootNavigator />
-      </Provider>
-    </NavigationContainer>
-  )
-};
+export default withProviders(RootNavigator);

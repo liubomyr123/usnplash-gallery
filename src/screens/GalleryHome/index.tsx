@@ -1,44 +1,23 @@
-import { ACCESS_KEY } from "@env";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View } from "react-native";
-// import { useSelector } from "react-redux";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Button, Dimensions, FlatList, ListRenderItemInfo, RefreshControl, StyleSheet, Text, View } from "react-native";
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { ProgressiveImage } from "../../shared/ProgressiveImage";
 
-type HomeProps = NativeStackScreenProps<RootStackParamList, "Home">;
+import { ProgressiveImage } from "../../shared/ProgressiveImage";
+import { useGetImagesByPageAndQueryQuery, useLazyGetImagesByPageAndQueryQuery } from "./api";
+
+const { width } = Dimensions.get('window');
 
 export const GalleryHomeScreen = ({ navigation }: HomeProps) => {
-    // const galleryList = useSelector((state: RootState) => state.galleryList);
-    // console.log('galleryList', galleryList);
-    const [users, setUsers] = useState<any>([]);
+    const [users, setUsers] = useState<UnsplashResults[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [isError, setIsError] = useState(false);
 
-    // https://www.freecodecamp.org/news/how-to-make-an-image-search-app-in-react/
-    // https://unsplash.com/documentation#search-photos
-    const getUsers = async () => {
-        setIsLoading(true);
-        const data = await fetch(`https://api.unsplash.com/search/photos?&page=${currentPage}&query=tesla&client_id=${ACCESS_KEY}`);
-        const dataJ = await data.json();
-        const result = dataJ.results.map(({ alt_description, urls, id, width, height, user: { first_name, last_name } }: any) => ({
-            height,
-            user: { first_name, last_name },
-            width,
-            id,
-            urls,
-            alt_description
-        }));
-        setUsers((prev: any) => [
-            ...prev,
-            ...result
-        ]);
-        setIsLoading(false)
-    };
+    const { data, error, isFetching } = useGetImagesByPageAndQueryQuery({ currentPage });
+    const [trigger] = useLazyGetImagesByPageAndQueryQuery()
 
-    const renderItem = ({ item }: any) => {
-        const { alt_description, urls: { small }, user: { first_name, last_name }, id } = item;
-        const { width } = Dimensions.get('window');
+    const renderItem = ({ item }: ListRenderItemInfo<UnsplashResults>) => {
+        const { alt_description, urls: { small }, user: { first_name, last_name } } = item;
 
         return (
             <View style={styles.itemWrapperStyles}>
@@ -53,10 +32,11 @@ export const GalleryHomeScreen = ({ navigation }: HomeProps) => {
                     <Text style={styles.txtEmail} numberOfLines={1}>{alt_description}</Text>
                 </View>
                 <View style={styles.openImageWrapperStyles}>
-                    <Icon style={styles.openImage} name="external-link" size={20} color="#000"
-                        onPress={() =>
-                            navigation.navigate('Details', { item })
-                        }
+                    <Icon style={styles.openImage}
+                        name="external-link"
+                        size={20}
+                        color="#000"
+                        onPress={() => navigation.navigate('Details', { item })}
                     />
                 </View>
             </View>
@@ -64,7 +44,7 @@ export const GalleryHomeScreen = ({ navigation }: HomeProps) => {
     };
 
     const renderLoader = () => {
-        if (!isLoading) return null;
+        if (!isFetching) return null;
         return (
             <View style={styles.loaderStyles}>
                 <ActivityIndicator size={'large'} color={'#aaa'} />
@@ -72,14 +52,43 @@ export const GalleryHomeScreen = ({ navigation }: HomeProps) => {
         );
     };
 
-    const loadMoreItems = () => {
-        setCurrentPage((prev) => prev + 1);
+    const loadMoreItems = () => setCurrentPage((prev) => prev + 1);
+
+    const manualFetch = async () => {
+        setIsError(false);
+        try {
+            const payload = await trigger({ currentPage: 1 }).unwrap();
+            setUsers(payload);
+        } catch (error) {
+            setIsError(true);
+        }
     }
 
-    useEffect(() => {
-        getUsers();
-    }, [currentPage]);
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await manualFetch();
+        setRefreshing(false);
+    }, [refreshing]);
 
+    useEffect(() => {
+        if (!isFetching && !error) {
+            setUsers((prev: UnsplashResults[]) => [...prev, ...data || []]);
+        };
+    }, [data]);
+
+    if (isError || error) {
+        return (
+            <View style={styles.errorWrapperStyles}>
+                <Text style={styles.error}>Oops... Press below to refresh</Text>
+                <Icon style={styles.refreshErrorIcon}
+                    name="refresh"
+                    size={30}
+                    color="#000"
+                    onPress={manualFetch}
+                />
+            </View>
+        )
+    }
     return (
         <FlatList
             data={users}
@@ -88,6 +97,7 @@ export const GalleryHomeScreen = ({ navigation }: HomeProps) => {
             ListFooterComponent={renderLoader}
             onEndReached={loadMoreItems}
             onEndReachedThreshold={0}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
     );
 };
@@ -123,5 +133,17 @@ const styles = StyleSheet.create({
     openImageWrapperStyles: {
         justifyContent: 'center'
     },
-    openImage: {}
+    openImage: {},
+    errorWrapperStyles: {
+        margin: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    error: {
+        color: 'red',
+    },
+    refreshErrorIcon: {
+        marginTop: 10,
+    }
 });

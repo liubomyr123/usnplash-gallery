@@ -1,6 +1,6 @@
 type RootStackParamList = {
     Home: undefined;
     Details: {
-        item: any;
+        item: UnsplashResults;
     };
 };
